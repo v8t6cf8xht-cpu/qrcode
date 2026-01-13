@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>庫存掃描系統（手機版）</title>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { margin:0; font-family: Arial, sans-serif; background:#f5f5f5; }
@@ -73,8 +74,8 @@ th { background:#f0f0f0; }
 
 <label>備註</label>
 <div class="button-row" id="noteBtns">
-  <button class="optionBtn red" data-value="不良">不良</button>
-  <button class="optionBtn orange" data-value="待修">待修</button>
+  <button class="optionBtn red" data-value="不良品">不良品</button>
+  <button class="optionBtn orange" data-value="待修品">待修品</button>
   <button class="optionBtn green" data-value="待歸位">待歸位</button>
   <button class="optionBtn gray" data-value="其他">其他</button>
 </div>
@@ -101,7 +102,7 @@ th { background:#f0f0f0; }
 <script>
 // ===== 料號 → 型號對照 =====
 const itemModelMap = {
-   "CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
+  "CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
 "CT24J1200T01": "5VA-1200 5A",
 "ESCT-TU10-20A": "Split core CT-Type:ESCT-TA10",
 "ESCT-TU16-150A": "Split core CT-Type:ESCT-TA16",
@@ -192,13 +193,14 @@ const itemModelMap = {
 "P121000500": "BAW-2CBA 10(80)A",
 "P122000700": "BAW-3HBA 10(100)A",
 "P131001000": "BAW-4GBA 10(100)A",
+
 };
 
 // ===== QR Code 掃描 =====
 const video = document.getElementById("video");
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
-let scanning=true, stream=null;
+let scanning=false, stream=null;
 
 function startCamera(){
   scanning=true;
@@ -206,11 +208,13 @@ function startCamera(){
     .then(s=>{
       stream=s;
       video.srcObject=stream;
+      video.play();
       requestAnimationFrame(tick);
     })
     .catch(err=>alert("相機無法啟動："+err));
 }
 function stopCamera(){ scanning=false; if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } }
+
 function tick(){
   if(!scanning) return;
   if(video.readyState===video.HAVE_ENOUGH_DATA){
@@ -218,9 +222,10 @@ function tick(){
     context.drawImage(video,0,0,canvas.width,canvas.height);
     const imageData=context.getImageData(0,0,canvas.width,canvas.height);
     const code=jsQR(imageData.data,imageData.width,canvas.height);
-    if(code){ 
-      document.getElementById("item").value=code.data; 
-      document.getElementById("model").value=itemModelMap[code.data]||"（未設定型號）"; 
+    if(code){
+      scanning=false;
+      document.getElementById("item").value=code.data;
+      document.getElementById("model").value=itemModelMap[code.data]||"（未設定型號）";
     }
   }
   requestAnimationFrame(tick);
@@ -283,27 +288,32 @@ function addRecord(){
   // 清空欄位
   document.getElementById("item").value="";
   document.getElementById("model").value="";
-  document.getElementById("qty").value=""; // 保持空白
+  document.getElementById("qty").value="";
   selectedNote=""; selectedLocation="";
   locationBtns.forEach(b=>b.classList.remove("selected"));
   noteBtns.forEach(b=>b.classList.remove("selected"));
   noteInput.value=""; noteInput.style.display="none";
 }
 
-// ===== 匯出 Excel =====
-document.getElementById("exportBtn").addEventListener("click",()=>{
+// ===== 匯出 Excel（中文正常） =====
+document.getElementById("exportBtn").addEventListener("click", ()=>{
   const table=document.getElementById("recordTable");
-  let csv=[];
-  for(let i=0;i<table.rows.length;i++){
-    const row=table.rows[i]; let rowData=[];
-    for(let j=0;j<row.cells.length-1;j++){ rowData.push('"'+row.cells[j].innerText.replace(/"/g,'""')+'"'); }
-    csv.push(rowData.join(","));
+  const ws_data=[];
+  ws_data.push(["時間","料號","型號","儲位","數量","備註"]);
+
+  for(let i=1;i<table.rows.length;i++){
+    const row=table.rows[i];
+    const rowData=[];
+    for(let j=0;j<row.cells.length-1;j++){
+      rowData.push(row.cells[j].innerText);
+    }
+    ws_data.push(rowData);
   }
-  const blob=new Blob([csv.join("\n")],{type:'text/csv;charset=utf-8;'});
-  const link=document.createElement("a");
-  link.href=URL.createObjectURL(blob);
-  link.download="庫存紀錄_"+new Date().toISOString().slice(0,19).replace(/:/g,"")+".csv";
-  link.click();
+
+  const ws=XLSX.utils.aoa_to_sheet(ws_data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "庫存紀錄");
+  XLSX.writeFile(wb, "庫存紀錄.xlsx");
 });
 
 // ===== 重新掃描 & 停止掃描 =====
