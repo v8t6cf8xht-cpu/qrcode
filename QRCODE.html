@@ -11,8 +11,9 @@
   button { margin-top: 10px; padding: 5px 10px; }
   #video { width: 300px; border: 1px solid #ccc; margin-top: 10px; }
   #noteInput { margin-top: 5px; width: 200px; }
-  table { margin-top: 20px; border-collapse: collapse; }
+  table { margin-top: 20px; border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid #000; padding: 5px; text-align: center; }
+  .deleteBtn { color: red; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -30,6 +31,7 @@
 <label>儲位</label>
 <select id="location">
   <option value="C10-1">C10-1</option>
+  <option value="C10-2">C10-2</option>
   <option value="C10-5">C10-5</option>
 </select>
 
@@ -46,7 +48,8 @@
 </select>
 <input type="text" id="noteInput" placeholder="請輸入備註" style="display:none;">
 
-<button id="saveBtn">儲存紀錄</button>
+<button id="nextBtn">下一筆</button>
+<button id="exportBtn">匯出 Excel</button>
 
 <h3>紀錄列表</h3>
 <table id="recordTable">
@@ -57,18 +60,108 @@
     <th>儲位</th>
     <th>數量</th>
     <th>備註</th>
+    <th>操作</th>
   </tr>
 </table>
 
 <script>
 // ===== 料號 → 型號對照表 =====
 const itemModelMap = {
-  "ABC-123": "伺服器電源模組 750W",
-  "XYZ-888": "工業控制板 V2",
-  "A100-01": "馬達驅動器"
+  "CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
+"CT24J1200T01": "5VA-1200 5A",
+"ESCT-TU10-20A": "Split core CT-Type:ESCT-TA10",
+"ESCT-TU16-150A": "Split core CT-Type:ESCT-TA16",
+"ESCT-TU24-300A": "Split core CT-Type:ESCT-TA24",
+"ESCT-TU36-600A": "Split core CT-Type:ESCT-TA36",
+"F200015101": "2 port RS-422 485 device server",
+"F200015102": "UPort 1130   1 Port USB-to-Serial Adaptor , RS-422 485",
+"P111000100": "BEW-1ABA 110V 10(40)A 60Hz",
+"P111000400": "BAW-1HBA 10(50)A 60Hz  TV220",
+"P111000500": "BAW-1HCA 20(80)A 60Hz TV220V",
+"P114000100": "BAW-1CBBA 10(50)A 60Hz (兼容110V)(RS485)",
+"P114000300": "BAW-1CHBA 10(80)A 60Hz TV(RS485)",
+"P115000300": "讀卡機 BAW-RL",
+"P115000800": "IC卡用電預付費裝置 BAW-RA 加值機 ( 附電源變壓器、管理卡、費率卡 )",
+"P115000901": "BAW-1AHBA 10(80)A 60Hz TV220",
+"P117000100": "DIN Rail Electronic Energy Meter CED-1CBEA 5(100)A 50 60Hz CL.1",
+"P118000100": "BAW-1DHBA 10(80)A 60Hz",
+"P121000400": "BAW-2CCA 20(80)A 60Hz",
+"P122000100": "BEW-3BAA 5A 60Hz",
+"P122000400": "BAW-3HAA 5(20)A 60Hz TV220V",
+"P122000600": "BAW-3HCA 20(100)A 60Hz TV220",
+"P125000300": "BAW-2CCBA 10(80)A 60Hz (RS485)",
+"P126000300": "BAW-3CBCA 20(100)A 60Hz (兼容110V)(RS485)",
+"P128000400": "BAW-2ACBA 10(80)A 60Hz",
+"P131000100": "BEW-4EAA 5A 60Hz(兼容110 190V)",
+"P131000200": "BEW-4EBA 10(50)A 60Hz(兼容110 190V)",
+"P131000300": "BEW-4ECA 20(100)A 60Hz(兼容110 190V)",
+"P131000700": "BAW-4GAA 5(20)A 60Hz",
+"P131000800": "BAW-4GBA 10(50)A 60Hz",
+"P131000900": "BAW-4GCA 20(100)A 60Hz",
+"P133000100": "BAW-4CGAA 5(20)A 60Hz TV110 (RS485)",
+"P133000400": "BAW-4CGBA 10(100)A 60Hz TV110 (RS485)",
+"P135000100": "CED-4CFEA 220 380V 5(80)A 50 60Hz CL.1",
+"P135000101": "CED-4CFBA 230 400V 10(100)A 50 60Hz",
+"P135000201": "CED-4CFAA 230 400V 5(6)A 50 60Hz",
+"P135000500": "CED-4C ML Multi-parameters 1p2w, 1p3w,3p3w,3p4w",
+"P136000100": "CMFM-F 50-600V  1A 5A 45-66Hz  CL0.5",
+"P136000200": "CMFM-G 50-600V  1A 5A 45-66Hz  CL0.5 TOU",
+"RJ12-100": "10.0 meter",
+"Z3-C160120TH": "120A 1A-1VA 1.0",
+"Z3-C240050TH": "50A 5A-0.5VA 5.0",
+"Z3-C240100TH": "100A 5A-1VA 1.0 (UD-0552-4)",
+"Z3-C240150TH": "150A 5A-1VA 1.0 (UD-0552-4)",
+"Z3-C240200TH": "200A 5A-1VA 1.0 (UD-0552-4)",
+"Z3-C240300TH": "300A 5A-2.5VA 1.0 (UD-0552-4)",
+"Z3-C360400TH": "400A 5A -2.5VA 1.0(UD-0552-4)",
+"Z3-C360500TH": "500A 5A-7.5VA 1.0 (UD-0552-4)",
+"Z3-C360600TH": "600A 5A-12.5VA 1.0 (UD-0552-4)",
+"Z3-C500700TH": "700A 5A-5VA 1.0 (UD-0552-4)",
+"Z3-C500800TH": "800A 5A-12.5VA 1.0 (UD-0552-4)",
+"A111600400": "Top cover Assembly BAW-1~2",
+"A111600500": "Terminal cover Assembly BAW-1 1P2W",
+"A111700300": "Register BAW-1~4 A11",
+"A111900300": "Chassis Assembly BAW-1HBA 10(80)A 60Hz  TV220",
+"A115000100": "電源變壓器BAW-RA KG- 9V1.3A",
+"A115000200": "IC CARD (Print)",
+"A115000300": "Optical head",
+"A115000400": "Signal cable",
+"A121900300": "Chassis Assembly BAW-2  10(80)A",
+"A122600400": "Top cover Assembly BAW-3~4",
+"A122600500": "Terminal cover Assembly BAW-3 3P3W-direct-type",
+"A122900400": "Chassis Assembly BAW-3  10(100)A",
+"A1240001-00": "電表電池 FDK-CR2 3-8LHT-CN240S",
+"A1240002-00": "AMI電表電池 TOSHIBA ER4V 3.6V-1200mAh",
+"A124902300": "插座組立圓表",
+"A131600700": "Terminal cover Assembly BAW-4 3P4W-direct-type",
+"A131600800": "Terminal cover Assembly BAW-4 3P4W-CT",
+"A131900100": "Chassis Assembly BAW-4 5(20)A",
+"A131900400": "Chassis Assembly BAW-4  10(100)A",
+"C111700111": "Ø3x6mm 自攻螺絲十字圓頭",
+"C111700211": "Ø3x8mm 自攻螺絲十字圓頭",
+"C111700448-00": "BAW瓦時計外箱(30入)",
+"C111700548-00": "BAW瓦時計外箱(12入) ",
+"C111700948-00": "BAW預付費電表外箱(12入 18入)",
+"P115000100": "BAW-1ABBA 10(50)A 60Hz",
+"P121000300": "BAW-2CBA 10(50)A 60Hz",
+"P122000500": "BAW-3HBA 10(50)A 60Hz TV220V",
+"P123000100": "BAW-2DCBA 10(80)A 60Hz",
+"P125000100": "BAW-2CCBA 10(50)A 60Hz (RS485)",
+"P125000200": "BAW-2CCCA 20(80)A 60Hz (RS485)",
+"P126000100": "BAW-3CHAA 5(20)A 60Hz TV(RS485)",
+"P126000200": "BAW-3CBBA 10(50)A 60Hz (兼容110V)(RS485)",
+"P126000400": "BAW-3CHBA 10(100)A 60Hz TV(RS485)",
+"P133000200": "BAW-4CGBA 10(50)A 60Hz (RS485)",
+"P133000300": "BAW-4CGCA 20(100)A 60Hz (RS485)",
+"P135000200": "DIN Rail Electronic Energy Meter CED-4CFAA 220 380V 1.5(6)A 50 60Hz CL.1 附變比器用",
+"P111000600": "BAW-1HBA 10(80)A",
+"P121000500": "BAW-2CBA 10(80)A",
+"P122000700": "BAW-3HBA 10(100)A",
+"P131001000": "BAW-4GBA 10(100)A",
+
 };
 
-// ===== 相機掃描 =====
+// ===== QR Code 掃描 =====
 const video = document.getElementById("video");
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
@@ -109,8 +202,13 @@ noteSelect.addEventListener("change", () => {
   }
 });
 
-// ===== 儲存紀錄 + 下一筆準備 =====
-document.getElementById("saveBtn").addEventListener("click", () => {
+// ===== 下一筆按鈕 =====
+document.getElementById("nextBtn").addEventListener("click", () => {
+  addRecord();
+});
+
+// ===== 新增紀錄函式 =====
+function addRecord() {
   const item = document.getElementById("item").value;
   const model = document.getElementById("model").value;
   const location = document.getElementById("location").value;
@@ -123,7 +221,6 @@ document.getElementById("saveBtn").addEventListener("click", () => {
     return;
   }
 
-  // 新增紀錄到表格
   const table = document.getElementById("recordTable");
   const row = table.insertRow();
   row.insertCell(0).innerText = time;
@@ -132,17 +229,42 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   row.insertCell(3).innerText = location;
   row.insertCell(4).innerText = qty;
   row.insertCell(5).innerText = note;
+  const delCell = row.insertCell(6);
+  const delBtn = document.createElement("span");
+  delBtn.innerText = "刪除";
+  delBtn.className = "deleteBtn";
+  delBtn.onclick = () => row.remove();
+  delCell.appendChild(delBtn);
 
-  // ===== 清空欄位，準備下一筆 =====
+  // ===== 清空欄位準備下一筆 =====
   document.getElementById("item").value = "";
   document.getElementById("model").value = "";
   document.getElementById("qty").value = 1;
   noteSelect.value = "";
   noteInput.value = "";
   noteInput.style.display = "none";
-
-  // 聚焦到料號欄位（方便下一筆）
   document.getElementById("item").focus();
+}
+
+// ===== 匯出 Excel/CSV =====
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const table = document.getElementById("recordTable");
+  let csv = [];
+  for (let i = 0; i < table.rows.length; i++) {
+    const row = table.rows[i];
+    let rowData = [];
+    for (let j = 0; j < row.cells.length - 1; j++) { // 最後一欄刪除按鈕不匯出
+      rowData.push('"' + row.cells[j].innerText.replace(/"/g, '""') + '"');
+    }
+    csv.push(rowData.join(","));
+  }
+
+  const csvString = csv.join("\n");
+  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "庫存紀錄_" + new Date().toISOString().slice(0,19).replace(/:/g,"") + ".csv";
+  link.click();
 });
 </script>
 
