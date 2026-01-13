@@ -2,17 +2,17 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>庫存掃描系統 - 可刪除紀錄</title>
+<title>庫存掃描系統</title>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
-body { font-family: Arial; margin: 20px; }
-label { display: block; margin-top: 10px; }
-input, select, textarea, button { width: 200px; margin-top: 5px; padding: 5px; }
-button { width: auto; }
-#video { width: 300px; border: 1px solid #ccc; margin-top: 10px; }
-table { border-collapse: collapse; margin-top: 10px; }
-th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+  body { font-family: Arial; margin: 20px; }
+  label { display: block; margin-top: 10px; }
+  input, select, textarea { width: 200px; margin-top: 5px; padding: 5px; }
+  button { margin-top: 10px; padding: 5px 10px; }
+  #video { width: 300px; border: 1px solid #ccc; margin-top: 10px; }
+  #noteInput { margin-top: 5px; width: 200px; }
+  table { margin-top: 20px; border-collapse: collapse; }
+  th, td { border: 1px solid #000; padding: 5px; text-align: center; }
 </style>
 </head>
 <body>
@@ -38,11 +38,16 @@ th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
 <input type="number" id="qty" value="1" min="1">
 
 <label>備註</label>
-<textarea id="note" rows="2"></textarea>
+<select id="noteSelect">
+  <option value="">請選擇</option>
+  <option value="不良">不良</option>
+  <option value="待修">待修</option>
+  <option value="待歸位">待歸位</option>
+  <option value="其他">其他</option>
+</select>
+<input type="text" id="noteInput" placeholder="請輸入備註" style="display:none;">
 
 <button id="saveBtn">儲存紀錄</button>
-<button id="nextBtn" disabled>下一個</button>
-<button id="exportBtn">匯出 Excel</button>
 
 <h3>紀錄列表</h3>
 <table id="recordTable">
@@ -53,7 +58,6 @@ th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
     <th>儲位</th>
     <th>數量</th>
     <th>備註</th>
-    <th>操作</th>
   </tr>
 </table>
 
@@ -152,13 +156,13 @@ const itemModelMap = {
 "P122000700": "BAW-3HBA 10(100)A",
 "P131001000": "BAW-4GBA 10(100)A",
 
+  // 你可以在這裡新增更多對照
 };
 
-// ===== 相機掃描控制 =====
+// ===== QR Code 掃描 =====
 const video = document.getElementById("video");
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
-let scanning = true;
 
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
   .then(stream => {
@@ -169,21 +173,32 @@ navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
   .catch(err => alert("相機無法啟動：" + err));
 
 function tick() {
-  if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     const code = jsQR(imageData.data, imageData.width, imageData.height);
     if (code) {
-      scanning = false;
       document.getElementById("item").value = code.data;
       document.getElementById("model").value = itemModelMap[code.data] || "（未設定型號）";
-      document.getElementById("nextBtn").disabled = false;
     }
   }
   requestAnimationFrame(tick);
 }
+
+// ===== 備註下拉選 + 自訂輸入 =====
+const noteSelect = document.getElementById("noteSelect");
+const noteInput = document.getElementById("noteInput");
+
+noteSelect.addEventListener("change", () => {
+  if (noteSelect.value === "其他") {
+    noteInput.style.display = "block";
+  } else {
+    noteInput.style.display = "none";
+    noteInput.value = "";
+  }
+});
 
 // ===== 儲存紀錄 =====
 document.getElementById("saveBtn").addEventListener("click", () => {
@@ -191,7 +206,7 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   const model = document.getElementById("model").value;
   const location = document.getElementById("location").value;
   const qty = document.getElementById("qty").value;
-  const note = document.getElementById("note").value;
+  const note = noteSelect.value === "其他" ? noteInput.value : noteSelect.value;
   const time = new Date().toLocaleString();
 
   if (!item) {
@@ -208,32 +223,13 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   row.insertCell(4).innerText = qty;
   row.insertCell(5).innerText = note;
 
-  // ===== 新增刪除按鈕 =====
-  const delCell = row.insertCell(6);
-  const delBtn = document.createElement("button");
-  delBtn.innerText = "刪除";
-  delBtn.onclick = () => table.deleteRow(row.rowIndex);
-  delCell.appendChild(delBtn);
-
-  document.getElementById("saveBtn").disabled = true;
-});
-
-// ===== 下一個 =====
-document.getElementById("nextBtn").addEventListener("click", () => {
+  // 清空欄位
   document.getElementById("item").value = "";
   document.getElementById("model").value = "";
   document.getElementById("qty").value = 1;
-  document.getElementById("note").value = "";
-  document.getElementById("saveBtn").disabled = false;
-  document.getElementById("nextBtn").disabled = true;
-  scanning = true;
-});
-
-// ===== 匯出 Excel =====
-document.getElementById("exportBtn").addEventListener("click", () => {
-  const table = document.getElementById("recordTable");
-  const wb = XLSX.utils.table_to_book(table, { sheet: "庫存紀錄" });
-  XLSX.writeFile(wb, "庫存紀錄.xlsx");
+  noteSelect.value = "";
+  noteInput.value = "";
+  noteInput.style.display = "none";
 });
 </script>
 
