@@ -10,10 +10,10 @@ body { margin:0; font-family: Arial, sans-serif; background:#f5f5f5; }
 .container { padding:10px; max-width:600px; margin:auto; background:#fff; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
 h2 { text-align:center; color:#333; margin-bottom:10px; }
 
-/* 兩欄排版 */
-.flex-row { display:flex; flex-wrap:wrap; gap:10px; }
+/* 掃描 + 料號/型號旁排 */
+.flex-row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
 .flex-left { flex:1; display:flex; justify-content:center; align-items:center; }
-.flex-right { flex:1; display:flex; flex-direction:column; gap:5px; }
+.flex-right { flex:1; display:flex; flex-direction:column; gap:5px; justify-content:center; }
 
 #video { width:100%; max-width:200px; height:200px; border-radius:8px; border:2px solid #ccc; }
 
@@ -22,7 +22,6 @@ input[type=text], input[type=number] { width:100%; padding:8px; border-radius:4p
 
 .button-row { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
 button.optionBtn, #rescanBtn, #stopScanBtn, #saveBtn, #exportBtn { flex:1; padding:12px; border-radius:5px; font-size:16px; color:#fff; transition:0.2s; border:none; }
-
 button.optionBtn.selected { border:2px solid #000; }
 
 /* 顏色設定 */
@@ -47,7 +46,7 @@ th { background:#f0f0f0; }
 <div class="container">
 <h2>庫存掃描系統（手機版）</h2>
 
-<!-- 兩欄排版 -->
+<!-- 掃描 + 料號/型號 -->
 <div class="flex-row">
   <div class="flex-left">
     <video id="video" autoplay playsinline></video>
@@ -58,36 +57,37 @@ th { background:#f0f0f0; }
 
     <label>型號</label>
     <input type="text" id="model" readonly>
-
-    <label>儲位</label>
-    <div class="button-row" id="locationBtns">
-      <button class="optionBtn" data-value="C10-1">C10-1</button>
-      <button class="optionBtn" data-value="C10-2">C10-2</button>
-      <button class="optionBtn" data-value="C10-5">C10-5</button>
-    </div>
-
-    <label>數量</label>
-    <input type="number" id="qty" value="1" min="1">
-
-    <label>備註</label>
-    <div class="button-row" id="noteBtns">
-      <button class="optionBtn red" data-value="不良">不良</button>
-      <button class="optionBtn orange" data-value="待修">待修</button>
-      <button class="optionBtn green" data-value="待歸位">待歸位</button>
-      <button class="optionBtn gray" data-value="其他">其他</button>
-    </div>
-    <input type="text" id="noteInput" placeholder="請輸入備註" style="display:none; margin-top:5px;">
-
-    <div class="button-row" style="margin-top:10px;">
-      <button id="rescanBtn">重新掃描</button>
-      <button id="stopScanBtn">停止掃描</button>
-    </div>
-
-    <div class="button-row" style="margin-top:10px;">
-      <button id="saveBtn">儲存</button>
-      <button id="exportBtn">匯出 Excel</button>
-    </div>
   </div>
+</div>
+
+<!-- 操作區 -->
+<label>儲位</label>
+<div class="button-row" id="locationBtns">
+  <button class="optionBtn" data-value="C10-1">C10-1</button>
+  <button class="optionBtn" data-value="C10-2">C10-2</button>
+  <button class="optionBtn" data-value="C10-5">C10-5</button>
+</div>
+
+<label>數量</label>
+<input type="number" id="qty" value="1" min="1">
+
+<label>備註</label>
+<div class="button-row" id="noteBtns">
+  <button class="optionBtn red" data-value="不良">不良</button>
+  <button class="optionBtn orange" data-value="待修">待修</button>
+  <button class="optionBtn green" data-value="待歸位">待歸位</button>
+  <button class="optionBtn gray" data-value="其他">其他</button>
+</div>
+<input type="text" id="noteInput" placeholder="請輸入備註" style="display:none; margin-top:5px;">
+
+<div class="button-row" style="margin-top:10px;">
+  <button id="rescanBtn">重新掃描</button>
+  <button id="stopScanBtn">停止掃描</button>
+</div>
+
+<div class="button-row" style="margin-top:10px;">
+  <button id="saveBtn">儲存</button>
+  <button id="exportBtn">匯出 Excel</button>
 </div>
 
 <h3>紀錄列表</h3>
