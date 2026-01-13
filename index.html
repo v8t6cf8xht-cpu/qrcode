@@ -13,16 +13,22 @@ h2 { text-align:center; color:#333; margin-bottom:10px; }
 label { font-weight:bold; margin-top:10px; display:block; color:#555; }
 #item, #model, #qty, #noteInput { width:100%; padding:8px; margin-top:5px; border-radius:4px; border:1px solid #ccc; }
 .button-row { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
-button.optionBtn { flex:1; padding:10px; border:none; border-radius:5px; font-size:16px; color:#fff; }
-button#nextBtn { width:100%; background:#4CAF50; color:#fff; margin-top:10px; font-size:18px; }
-button#exportBtn { width:100%; background:#FF9800; color:#fff; margin-top:5px; font-size:18px; }
-button#rescanBtn { flex:1; background:#fff; color:#2196F3; border:2px solid #000; }
-button#stopScanBtn { flex:1; background:#f44336; color:#fff; }
+button.optionBtn { flex:1; padding:12px; border:none; border-radius:5px; font-size:16px; color:#fff; transition:0.2s; }
+button.optionBtn.selected { border:2px solid #000; }
 button#saveBtn { width:100%; background:#FFEB3B; color:#000; margin-top:10px; font-size:18px; }
-#noteBtns .optionBtn.red { background:#f44336; }
-#noteBtns .optionBtn.orange { background:#FF9800; }
-#noteBtns .optionBtn.green { background:#4CAF50; }
-#noteBtns .optionBtn.gray { background:#9E9E9E; }
+button#exportBtn { width:100%; background:#FF9800; color:#fff; margin-top:5px; font-size:18px; }
+button#rescanBtn, button#stopScanBtn { flex:1; padding:12px; border-radius:5px; font-size:16px; transition:0.2s; }
+
+/* 顏色設定 */
+#noteBtns .red { background:#f44336; }
+#noteBtns .orange { background:#FF9800; }
+#noteBtns .green { background:#4CAF50; }
+#noteBtns .gray { background:#9E9E9E; color:#fff; }
+
+#locationBtns .optionBtn { background:#2196F3; }
+#rescanBtn { background:#fff; color:#2196F3; border:2px solid #000; }
+#stopScanBtn { background:#f44336; color:#fff; border:none; }
+
 table { width:100%; border-collapse:collapse; margin-top:15px; }
 th, td { border:1px solid #ccc; padding:5px; text-align:center; font-size:14px; }
 th { background:#f0f0f0; }
@@ -44,7 +50,6 @@ th { background:#f0f0f0; }
 <label>儲位</label>
 <div class="button-row" id="locationBtns">
   <button class="optionBtn" data-value="C10-1">C10-1</button>
-  <button class="optionBtn" data-value="C10-2">C10-2</button>
   <button class="optionBtn" data-value="C10-5">C10-5</button>
 </div>
 
@@ -173,7 +178,7 @@ const itemModelMap = {
 
 };
 
-// ===== QR Code =====
+// ===== QR Code 掃描 =====
 const video = document.getElementById("video");
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
