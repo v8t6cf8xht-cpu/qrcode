@@ -69,14 +69,8 @@ th { background:#f0f0f0; }
 </div>
 
 <label>數量</label>
-document.getElementById("item").value="";
-document.getElementById("model").value="";
-document.getElementById("qty").value=""; // 保持空白
-selectedNote=""; selectedLocation="";
-locationBtns.forEach(b=>b.classList.remove("selected"));
-noteBtns.forEach(b=>b.classList.remove("selected"));
-noteInput.value=""; noteInput.style.display="none";
-  
+<input type="number" id="qty" placeholder="請輸入數量" min="1">
+
 <label>備註</label>
 <div class="button-row" id="noteBtns">
   <button class="optionBtn red" data-value="不良">不良</button>
@@ -225,7 +219,10 @@ function tick(){
     context.drawImage(video,0,0,canvas.width,canvas.height);
     const imageData=context.getImageData(0,0,canvas.width,canvas.height);
     const code=jsQR(imageData.data,imageData.width,canvas.height);
-    if(code){ document.getElementById("item").value=code.data; document.getElementById("model").value=itemModelMap[code.data]||"（未設定型號）"; }
+    if(code){ 
+      document.getElementById("item").value=code.data; 
+      document.getElementById("model").value=itemModelMap[code.data]||"（未設定型號）"; 
+    }
   }
   requestAnimationFrame(tick);
 }
@@ -281,7 +278,7 @@ function addRecord(){
   // 清空欄位
   document.getElementById("item").value="";
   document.getElementById("model").value="";
-  document.getElementById("qty").value=1;
+  document.getElementById("qty").value=""; // 保持空白
   selectedNote=""; selectedLocation="";
   locationBtns.forEach(b=>b.classList.remove("selected"));
   noteBtns.forEach(b=>b.classList.remove("selected"));
@@ -313,4 +310,3 @@ startCamera();
 </script>
 </body>
 </html>
-
