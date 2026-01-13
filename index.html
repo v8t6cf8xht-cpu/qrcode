@@ -2,36 +2,37 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>庫存掃描系統</title>
+<title>庫存 QRCode 掃描</title>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body { font-family: Arial; margin: 20px; }
-label { display: block; margin-top: 12px; font-weight: bold; }
-input, textarea { width: 220px; margin-top: 5px; padding: 6px; }
-button { padding: 6px 12px; margin: 4px 4px 0 0; cursor: pointer; }
-#video { width: 320px; border: 1px solid #ccc; margin-top: 10px; }
+body { font-family: Arial; margin:20px; }
+button { padding:8px 12px; margin:4px; }
+input, textarea { width:220px; padding:6px; }
+#video { width:320px; border:1px solid #ccc; display:none; }
 
-table { border-collapse: collapse; margin-top: 15px; }
-th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-
-.loc-btn { border:1px solid #999; background:#f5f5f5; }
+.loc-btn { border:1px solid #999; background:#eee; }
 .loc-btn.active { background:#2ecc71; color:#fff; }
 
 .note-btn { color:#fff; border:none; }
-.red { background:#e74c3c; }
-.orange { background:#e67e22; }
-.blue { background:#3498db; }
-.gray { background:#95a5a6; color:#000; }
+.red{background:#e74c3c;}
+.orange{background:#e67e22;}
+.blue{background:#3498db;}
+.gray{background:#95a5a6;color:#000;}
+
+table{border-collapse:collapse;margin-top:10px;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
 </style>
 </head>
 <body>
 
 <h2>📦 庫存掃描系統</h2>
 
-<video id="video" autoplay></video>
+<button id="startCamBtn">📷 啟動相機</button>
+<p id="camStatus">相機尚未啟動</p>
+<video id="video" playsinline></video>
 
 <label>料號</label>
 <input id="item" readonly>
@@ -39,208 +40,157 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 <label>型號</label>
 <input id="model" readonly>
 
-<label>儲位</label>
-<div>
-  <button class="loc-btn" data-loc="C10-1">C10-1</button>
-  <button class="loc-btn" data-loc="C10-2">C10-2</button>
-  <button class="loc-btn" data-loc="C10-5">C10-5</button>
-</div>
+<label>儲位</label><br>
+<button class="loc-btn" data-loc="C10-1">C10-1</button>
+<button class="loc-btn" data-loc="C10-2">C10-2</button>
+<button class="loc-btn" data-loc="C10-5">C10-5</button>
 
 <label>數量</label>
 <input id="qty" type="number" value="1" inputmode="numeric">
 
-<label>備註</label>
-<div>
-  <button class="note-btn red" data-note="不良品">不良品</button>
-  <button class="note-btn orange" data-note="待修品">待修品</button>
-  <button class="note-btn blue" data-note="待歸位">待歸位</button>
-  <button class="note-btn gray" data-note="其他">其他</button>
-</div>
+<label>備註</label><br>
+<button class="note-btn red" data-note="不良品">不良品</button>
+<button class="note-btn orange" data-note="待修品">待修品</button>
+<button class="note-btn blue" data-note="待歸位">待歸位</button>
+<button class="note-btn gray" data-note="其他">其他</button>
+<br>
 <textarea id="note"></textarea>
 
-<br>
+<br><br>
 <button id="saveBtn">儲存</button>
 <button id="nextBtn" disabled>下一個</button>
 <button id="exportBtn">匯出 Excel</button>
 
 <table id="recordTable">
 <tr>
-  <th>時間</th><th>料號</th><th>型號</th>
-  <th>儲位</th><th>數量</th><th>備註</th><th>操作</th>
+<th>時間</th><th>料號</th><th>型號</th>
+<th>儲位</th><th>數量</th><th>備註</th><th>操作</th>
 </tr>
 </table>
 
 <script>
+/* ========= 設定 ========= */
 const STORAGE_KEY = "inventory_records";
-
-/* 料號對照 */
 const itemModelMap = {
-  "CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
-"CT24J1200T01": "5VA-1200 5A",
-"ESCT-TU10-20A": "Split core CT-Type:ESCT-TA10",
-"ESCT-TU16-150A": "Split core CT-Type:ESCT-TA16",
-"ESCT-TU24-300A": "Split core CT-Type:ESCT-TA24",
-"ESCT-TU36-600A": "Split core CT-Type:ESCT-TA36",
-"F200015101": "2 port RS-422 485 device server",
-"F200015102": "UPort 1130   1 Port USB-to-Serial Adaptor , RS-422 485",
-"P111000100": "BEW-1ABA 110V 10(40)A ",
-"P111000400": "BAW-1HBA 10(50)A ",
-"P111000500": "BAW-1HCA 20(80)A",
-"P114000100": "BAW-1CBBA 10(50)A  (兼容110V)(RS485)",
-"P114000300": "BAW-1CHBA 10(80)A  TV(RS485)",
-"P115000300": "讀卡機 BAW-RL",
-"P115000800": "IC卡用電預付費裝置 BAW-RA 加值機 ( 附電源變壓器、管理卡、費率卡 )",
-"P115000901": "BAW-1AHBA 10(80)A  ",
-"P117000100": "DIN Rail Electronic Energy Meter CED-1CBEA 5(100)A 50  CL.1",
-"P118000100": "BAW-1DHBA 10(80)A ",
-"P121000400": "BAW-2CCA 20(80)A ",
-"P122000100": "BEW-3BAA 5A ",
-"P122000400": "BAW-3HAA 5(20)A",
-"P122000600": "BAW-3HCA 20(100)A  ",
-"P125000300": "BAW-2CCBA 10(80)A  (RS485)",
-"P126000300": "BAW-3CBCA 20(100)A  (兼容110V)(RS485)",
-"P128000400": "BAW-2ACBA 10(80)A ",
-"P131000100": "BEW-4EAA 5A (兼容110 190V)",
-"P131000200": "BEW-4EBA 10(50)A (兼容110 190V)",
-"P131000300": "BEW-4ECA 20(100)A (兼容110 190V)",
-"P131000700": "BAW-4GAA 5(20)A ",
-"P131000800": "BAW-4GBA 10(50)A ",
-"P131000900": "BAW-4GCA 20(100)A ",
-"P133000100": "BAW-4CGAA 5(20)A   (RS485)",
-"P133000400": "BAW-4CGBA 10(100)A   (RS485)",
-"P135000100": "CED-4CFEA 220 380V 5(80)A 50  CL.1",
-"P135000101": "CED-4CFBA 230 400V 10(100)A 50 ",
-"P135000201": "CED-4CFAA 230 400V 5(6)A 50 ",
-"P135000500": "CED-4C ML Multi-parameters 1p2w, 1p3w,3p3w,3p4w",
-"P136000100": "CMFM-F 50-600V  1A 5A 45-66Hz  CL0.5",
-"P136000200": "CMFM-G 50-600V  1A 5A 45-66Hz  CL0.5 TOU",
-"RJ12-100": "10.0 meter",
-"Z3-C160120TH": "120A 1A-1VA 1.0",
-"Z3-C240050TH": "50A 5A-0.5VA 5.0",
-"Z3-C240100TH": "100A 5A-1VA 1.0 (UD-0552-4)",
-"Z3-C240150TH": "150A 5A-1VA 1.0 (UD-0552-4)",
-"Z3-C240200TH": "200A 5A-1VA 1.0 (UD-0552-4)",
-"Z3-C240300TH": "300A 5A-2.5VA 1.0 (UD-0552-4)",
-"Z3-C360400TH": "400A 5A -2.5VA 1.0(UD-0552-4)",
-"Z3-C360500TH": "500A 5A-7.5VA 1.0 (UD-0552-4)",
-"Z3-C360600TH": "600A 5A-12.5VA 1.0 (UD-0552-4)",
-"Z3-C500700TH": "700A 5A-5VA 1.0 (UD-0552-4)",
-"Z3-C500800TH": "800A 5A-12.5VA 1.0 (UD-0552-4)",
-"A111600400": "Top cover Assembly BAW-1~2",
-"A111600500": "Terminal cover Assembly BAW-1 1P2W",
-"A111700300": "Register BAW-1~4 A11",
-"A111900300": "Chassis Assembly BAW-1HBA 10(80)A ",
-"A115000100": "電源變壓器BAW-RA KG- 9V1.3A",
-"A115000200": "IC CARD (Print)",
-"A115000300": "Optical head",
-"A115000400": "Signal cable",
-"A121900300": "Chassis Assembly BAW-2  10(80)A",
-"A122600400": "Top cover Assembly BAW-3~4",
-"A122600500": "Terminal cover Assembly BAW-3 3P3W-direct-type",
-"A122900400": "Chassis Assembly BAW-3  10(100)A",
-"A1240001-00": "電表電池 FDK-CR2 3-8LHT-CN240S",
-"A1240002-00": "AMI電表電池 TOSHIBA ER4V 3.6V-1200mAh",
-"A124902300": "插座組立圓表",
-"A131600700": "Terminal cover Assembly BAW-4 3P4W-direct-type",
-"A131600800": "Terminal cover Assembly BAW-4 3P4W-CT",
-"A131900100": "Chassis Assembly BAW-4 5(20)A",
-"A131900400": "Chassis Assembly BAW-4  10(100)A",
-"C111700111": "Ø3x6mm 自攻螺絲十字圓頭",
-"C111700211": "Ø3x8mm 自攻螺絲十字圓頭",
-"C111700448-00": "BAW瓦時計外箱(30入)",
-"C111700548-00": "BAW瓦時計外箱(12入) ",
-"C111700948-00": "BAW預付費電表外箱(12入 18入)",
-"P115000100": "BAW-1ABBA 10(50)A ",
-"P121000300": "BAW-2CBA 10(50)A ",
-"P122000500": "BAW-3HBA 10(50)A  V",
-"P123000100": "BAW-2DCBA 10(80)A ",
-"P125000100": "BAW-2CCBA 10(50)A  (RS485)",
-"P125000200": "BAW-2CCCA 20(80)A  (RS485)",
-"P126000100": "BAW-3CHAA 5(20)A (RS485)",
-"P126000200": "BAW-3CBBA 10(50)A (兼容110V)(RS485)",
-"P126000400": "BAW-3CHBA 10(100)A (RS485)",
-"P133000200": "BAW-4CGBA 10(50)A  (RS485)",
-"P133000300": "BAW-4CGCA 20(100)A  (RS485)",
-"P135000200": "DIN Rail Electronic Energy Meter CED-4CFAA 220 380V 1.5(6)A 50  CL.1 附變比器用",
-"P111000600": "BAW-1HBA 10(80)A",
-"P121000500": "BAW-2CBA 10(80)A",
-"P122000700": "BAW-3HBA 10(100)A",
-"P131001000": "BAW-4GBA 10(100)A",
-,
+  "ABC-123":"伺服器電源模組",
+  "XYZ-888":"控制板"
 };
 
-/* ===== LocalStorage ===== */
-function saveToStorage(data){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-function loadFromStorage(){
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-}
-
-/* ===== 儲位 ===== */
-let selectedLocation = "";
-document.querySelectorAll(".loc-btn").forEach(btn=>{
-  btn.onclick = ()=>{
-    document.querySelectorAll(".loc-btn").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    selectedLocation = btn.dataset.loc;
-  }
-});
-
-/* ===== 備註 ===== */
-document.querySelectorAll(".note-btn").forEach(btn=>{
-  btn.onclick = ()=>{
-    if(btn.dataset.note !== "其他"){
-      note.value = btn.dataset.note;
-    } else {
-      note.focus();
-    }
-  }
-});
-
-/* ===== 載入歷史資料 ===== */
-const recordTable = document.getElementById("recordTable");
-let records = loadFromStorage();
+/* ========= LocalStorage ========= */
+let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+const table = document.getElementById("recordTable");
 records.forEach(addRow);
 
-/* ===== 儲存 ===== */
-saveBtn.onclick = ()=>{
-  if(!item.value || !selectedLocation){
-    alert("請確認料號與儲位");
-    return;
-  }
-  const data = {
-    time: new Date().toLocaleString(),
-    item: item.value,
-    model: model.value,
-    loc: selectedLocation,
-    qty: qty.value,
-    note: note.value
+/* ========= 儲位 ========= */
+let selectedLoc="";
+document.querySelectorAll(".loc-btn").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll(".loc-btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    selectedLoc=b.dataset.loc;
   };
-  records.push(data);
-  saveToStorage(records);
-  addRow(data);
+});
+
+/* ========= 備註 ========= */
+document.querySelectorAll(".note-btn").forEach(b=>{
+  b.onclick=()=>{
+    if(b.dataset.note!=="其他") note.value=b.dataset.note;
+    else note.focus();
+  };
+});
+
+/* ========= 相機 ========= */
+const video=document.getElementById("video");
+const status=document.getElementById("camStatus");
+const canvas=document.createElement("canvas");
+const ctx=canvas.getContext("2d");
+let scanning=false;
+
+document.getElementById("startCamBtn").onclick = async ()=>{
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment"}
+    });
+    video.srcObject=stream;
+    video.style.display="block";
+    scanning=true;
+    status.textContent="相機已啟動，請掃 QRCode";
+    requestAnimationFrame(scanLoop);
+  }catch(e){
+    status.textContent="❌ 相機啟動失敗，請檢查權限";
+    alert("相機無法啟動：" + e.message);
+  }
 };
 
-/* ===== 表格 ===== */
-function addRow(d){
-  const r = recordTable.insertRow();
-  r.innerHTML = `
-    <td>${d.time}</td><td>${d.item}</td><td>${d.model}</td>
-    <td>${d.loc}</td><td>${d.qty}</td><td>${d.note}</td>
-    <td><button onclick="delRow(this)">刪除</button></td>
-  `;
-}
-function delRow(btn){
-  const idx = btn.parentNode.parentNode.rowIndex - 1;
-  records.splice(idx,1);
-  saveToStorage(records);
-  recordTable.deleteRow(idx+1);
+function scanLoop(){
+  if(!scanning) return;
+  if(video.readyState===video.HAVE_ENOUGH_DATA){
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    ctx.drawImage(video,0,0);
+    const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const code=jsQR(img.data,img.width,img.height);
+    if(code){
+      scanning=false;
+      item.value=code.data;
+      model.value=itemModelMap[code.data]||"（未設定）";
+      nextBtn.disabled=false;
+      status.textContent="已掃描，請輸入資料";
+      return;
+    }
+  }
+  requestAnimationFrame(scanLoop);
 }
 
-/* ===== 匯出 ===== */
-exportBtn.onclick = ()=>{
-  const wb = XLSX.utils.table_to_book(recordTable, {sheet:"庫存"});
+/* ========= 儲存 ========= */
+saveBtn.onclick=()=>{
+  if(!item.value||!selectedLoc){
+    alert("料號或儲位未選");
+    return;
+  }
+  const d={
+    time:new Date().toLocaleString(),
+    item:item.value,
+    model:model.value,
+    loc:selectedLoc,
+    qty:qty.value,
+    note:note.value
+  };
+  records.push(d);
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+  addRow(d);
+};
+
+function addRow(d){
+  const r=table.insertRow();
+  r.innerHTML=`
+    <td>${d.time}</td><td>${d.item}</td><td>${d.model}</td>
+    <td>${d.loc}</td><td>${d.qty}</td><td>${d.note}</td>
+    <td><button onclick="delRow(this)">刪除</button></td>`;
+}
+
+function delRow(btn){
+  const i=btn.parentNode.parentNode.rowIndex-1;
+  records.splice(i,1);
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+  table.deleteRow(i+1);
+}
+
+/* ========= 下一個 ========= */
+nextBtn.onclick=()=>{
+  item.value=model.value=note.value="";
+  qty.value=1;
+  selectedLoc="";
+  document.querySelectorAll(".loc-btn").forEach(b=>b.classList.remove("active"));
+  scanning=true;
+  nextBtn.disabled=true;
+  status.textContent="請掃下一個 QRCode";
+  requestAnimationFrame(scanLoop);
+};
+
+/* ========= 匯出 ========= */
+exportBtn.onclick=()=>{
+  const wb=XLSX.utils.table_to_book(table,{sheet:"庫存"});
   XLSX.writeFile(wb,"庫存紀錄.xlsx");
 };
 </script>
