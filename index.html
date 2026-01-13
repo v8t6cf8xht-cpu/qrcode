@@ -30,33 +30,7 @@ th,td{border:1px solid #ccc;padding:6px;text-align:center;}
 
 <h2>📦 庫存掃描系統</h2>
 
-document.getElementById("startCamBtn").onclick = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" },
-      audio: false
-    });
-
-    video.srcObject = stream;
-
-    // ⭐ 關鍵（iPhone 必要）
-    video.setAttribute("playsinline", true);
-    video.muted = true;
-
-    await video.play();   // ⭐ 一定要呼叫
-
-    video.style.display = "block";
-    scanning = true;
-    status.textContent = "相機已啟動，請掃 QRCode";
-
-    requestAnimationFrame(scanLoop);
-
-  } catch (err) {
-    status.textContent = "❌ 相機啟動失敗";
-    alert("相機錯誤：" + err.message);
-  }
-};
-
+<button id="startCamBtn">📷 啟動相機</button>
 <p id="camStatus">相機尚未啟動</p>
 <video id="video" playsinline></video>
 
@@ -68,8 +42,8 @@ document.getElementById("startCamBtn").onclick = async () => {
 
 <label>儲位</label><br>
 <button class="loc-btn" data-loc="C10-1">C10-1</button>
-<button class="loc-btn" data-loc="C10-2">C10-2</button>
 <button class="loc-btn" data-loc="C10-5">C10-5</button>
+<button class="loc-btn" data-loc="C11-1">C11-1</button>
 
 <label>數量</label>
 <input id="qty" type="number" value="1" inputmode="numeric">
@@ -150,7 +124,6 @@ document.getElementById("startCamBtn").onclick = async ()=>{
 
 function scanLoop(){
   if(!scanning) return;
-   if (video.paused || video.ended) return;
   if(video.readyState===video.HAVE_ENOUGH_DATA){
     canvas.width=video.videoWidth;
     canvas.height=video.videoHeight;
@@ -223,5 +196,3 @@ exportBtn.onclick=()=>{
 </script>
 </body>
 </html>
-
-
