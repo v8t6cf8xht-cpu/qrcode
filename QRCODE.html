@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>庫存掃描系統 - 原生相機</title>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<style>
+  body { font-family: Arial; margin: 20px; }
+  label { display: block; margin-top: 10px; }
+  input, select, textarea { width: 200px; margin-top: 5px; padding: 5px; }
+  button { margin-top: 10px; padding: 5px 10px; }
+  #video { width: 300px; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+
+<h2>庫存掃描系統</h2>
+
+<video id="video" autoplay></video>
+
+<label>料號</label>
+<input type="text" id="item" readonly>
+
+<label>型號</label>
+<input type="text" id="model" readonly>
+
+<label>儲位</label>
+<select id="location">
+  <option value="C10-1">C10-1</option>
+  <option value="C10-5">C10-5</option>
+</select>
+
+<label>數量</label>
+<input type="number" id="qty" value="1" min="1">
+
+<label>備註</label>
+<textarea id="note" rows="2"></textarea>
+
+<button id="saveBtn">儲存紀錄</button>
+
+<h3>紀錄列表</h3>
+<table border="1" cellpadding="5" id="recordTable">
+  <tr>
+    <th>時間</th>
+    <th>料號</th>
+    <th>型號</th>
+    <th>儲位</th>
+    <th>數量</th>
+    <th>備註</th>
+  </tr>
+</table>
+
+<script>
+// ===== 料號 → 型號對照表 =====
+const itemModelMap = {
+  "P111000400": "伺服器電源模組 750W",
+  "P111000500": "工業控制板 V2",
+  "A100-01": "馬達驅動器"
+};
+
+// ===== 相機掃描 =====
+const video = document.getElementById("video");
+const canvas = document.createElement("canvas");
+const context = canvas.getContext("2d");
+
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+  .then(stream => {
+    video.srcObject = stream;
+    video.setAttribute("playsinline", true);
+    requestAnimationFrame(tick);
+  })
+  .catch(err => alert("相機無法啟動：" + err));
+
+function tick() {
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code) {
+      // 掃描成功
+      document.getElementById("item").value = code.data;
+      document.getElementById("model").value = itemModelMap[code.data] || "（未設定型號）";
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+// ===== 儲存紀錄 =====
+document.getElementById("saveBtn").addEventListener("click", () => {
+  const item = document.getElementById("item").value;
+  const model = document.getElementById("model").value;
+  const location = document.getElementById("location").value;
+  const qty = document.getElementById("qty").value;
+  const note = document.getElementById("note").value;
+  const time = new Date().toLocaleString();
+
+  if (!item) {
+    alert("請先掃描料號！");
+    return;
+  }
+
+  const table = document.getElementById("recordTable");
+  const row = table.insertRow();
+  row.insertCell(0).innerText = time;
+  row.insertCell(1).innerText = item;
+  row.insertCell(2).innerText = model;
+  row.insertCell(3).innerText = location;
+  row.insertCell(4).innerText = qty;
+  row.insertCell(5).innerText = note;
+
+  // 清空欄位
+  document.getElementById("item").value = "";
+  document.getElementById("model").value = "";
+  document.getElementById("qty").value = 1;
+  document.getElementById("note").value = "";
+});
+</script>
+
+</body>
+</html>
