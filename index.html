@@ -8,18 +8,21 @@
 <style>
 body { margin:0; font-family: Arial, sans-serif; background:#f5f5f5; }
 .container { padding:10px; max-width:600px; margin:auto; background:#fff; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
-h2 { text-align:center; color:#333; }
+h2 { text-align:center; color:#333; margin-bottom:10px; }
 #video { width:100%; border-radius:8px; margin-bottom:10px; }
 label { font-weight:bold; margin-top:10px; display:block; color:#555; }
-#item, #model { width:100%; padding:8px; margin-top:5px; border-radius:4px; border:1px solid #ccc; }
+#item, #model, #qty, #noteInput { width:100%; padding:8px; margin-top:5px; border-radius:4px; border:1px solid #ccc; }
 .button-row { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
-button.optionBtn { flex:1; padding:10px; border:none; border-radius:5px; background:#2196F3; color:#fff; font-size:16px; }
-button.optionBtn.selected { background:#4CAF50; }
+button.optionBtn { flex:1; padding:10px; border:none; border-radius:5px; font-size:16px; color:#fff; }
 button#nextBtn { width:100%; background:#4CAF50; color:#fff; margin-top:10px; font-size:18px; }
 button#exportBtn { width:100%; background:#FF9800; color:#fff; margin-top:5px; font-size:18px; }
-button#rescanBtn { flex:1; background:#2196F3; }
-button#stopScanBtn { flex:1; background:#f44336; }
-#noteInput { width:100%; padding:8px; margin-top:5px; border-radius:4px; border:1px solid #ccc; display:none; }
+button#rescanBtn { flex:1; background:#fff; color:#2196F3; border:2px solid #000; }
+button#stopScanBtn { flex:1; background:#f44336; color:#fff; }
+button#saveBtn { width:100%; background:#FFEB3B; color:#000; margin-top:10px; font-size:18px; }
+#noteBtns .optionBtn.red { background:#f44336; }
+#noteBtns .optionBtn.orange { background:#FF9800; }
+#noteBtns .optionBtn.green { background:#4CAF50; }
+#noteBtns .optionBtn.gray { background:#9E9E9E; }
 table { width:100%; border-collapse:collapse; margin-top:15px; }
 th, td { border:1px solid #ccc; padding:5px; text-align:center; font-size:14px; }
 th { background:#f0f0f0; }
@@ -41,6 +44,7 @@ th { background:#f0f0f0; }
 <label>儲位</label>
 <div class="button-row" id="locationBtns">
   <button class="optionBtn" data-value="C10-1">C10-1</button>
+  <button class="optionBtn" data-value="C10-2">C10-2</button>
   <button class="optionBtn" data-value="C10-5">C10-5</button>
 </div>
 
@@ -49,19 +53,19 @@ th { background:#f0f0f0; }
 
 <label>備註</label>
 <div class="button-row" id="noteBtns">
-  <button class="optionBtn" data-value="不良">不良</button>
-  <button class="optionBtn" data-value="待修">待修</button>
-  <button class="optionBtn" data-value="待歸位">待歸位</button>
-  <button class="optionBtn" data-value="其他">其他</button>
+  <button class="optionBtn red" data-value="不良">不良</button>
+  <button class="optionBtn orange" data-value="待修">待修</button>
+  <button class="optionBtn green" data-value="待歸位">待歸位</button>
+  <button class="optionBtn gray" data-value="其他">其他</button>
 </div>
-<input type="text" id="noteInput" placeholder="請輸入備註">
+<input type="text" id="noteInput" placeholder="請輸入備註" style="display:none; margin-top:5px;">
 
 <div class="button-row" style="margin-top:10px;">
   <button id="rescanBtn">重新掃描</button>
   <button id="stopScanBtn">停止掃描</button>
 </div>
 
-<button id="nextBtn">下一筆</button>
+<button id="saveBtn">儲存</button>
 <button id="exportBtn">匯出 Excel</button>
 
 <h3>紀錄列表</h3>
@@ -75,9 +79,98 @@ th { background:#f0f0f0; }
 <script>
 // ===== 料號 → 型號對照 =====
 const itemModelMap = {
-  "ABC-123":"伺服器電源模組 750W",
-  "XYZ-888":"工業控制板 V2",
-  "A100-01":"馬達驅動器"
+  "CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
+"CT24J1200T01": "5VA-1200 5A",
+"ESCT-TU10-20A": "Split core CT-Type:ESCT-TA10",
+"ESCT-TU16-150A": "Split core CT-Type:ESCT-TA16",
+"ESCT-TU24-300A": "Split core CT-Type:ESCT-TA24",
+"ESCT-TU36-600A": "Split core CT-Type:ESCT-TA36",
+"F200015101": "2 port RS-422 485 device server",
+"F200015102": "UPort 1130   1 Port USB-to-Serial Adaptor , RS-422 485",
+"P111000100": "BEW-1ABA 110V 10(40)A ",
+"P111000400": "BAW-1HBA 10(50)A ",
+"P111000500": "BAW-1HCA 20(80)A",
+"P114000100": "BAW-1CBBA 10(50)A  (兼容110V)(RS485)",
+"P114000300": "BAW-1CHBA 10(80)A  TV(RS485)",
+"P115000300": "讀卡機 BAW-RL",
+"P115000800": "IC卡用電預付費裝置 BAW-RA 加值機 ( 附電源變壓器、管理卡、費率卡 )",
+"P115000901": "BAW-1AHBA 10(80)A  ",
+"P117000100": "DIN Rail Electronic Energy Meter CED-1CBEA 5(100)A 50  CL.1",
+"P118000100": "BAW-1DHBA 10(80)A ",
+"P121000400": "BAW-2CCA 20(80)A ",
+"P122000100": "BEW-3BAA 5A ",
+"P122000400": "BAW-3HAA 5(20)A",
+"P122000600": "BAW-3HCA 20(100)A  ",
+"P125000300": "BAW-2CCBA 10(80)A  (RS485)",
+"P126000300": "BAW-3CBCA 20(100)A  (兼容110V)(RS485)",
+"P128000400": "BAW-2ACBA 10(80)A ",
+"P131000100": "BEW-4EAA 5A (兼容110 190V)",
+"P131000200": "BEW-4EBA 10(50)A (兼容110 190V)",
+"P131000300": "BEW-4ECA 20(100)A (兼容110 190V)",
+"P131000700": "BAW-4GAA 5(20)A ",
+"P131000800": "BAW-4GBA 10(50)A ",
+"P131000900": "BAW-4GCA 20(100)A ",
+"P133000100": "BAW-4CGAA 5(20)A   (RS485)",
+"P133000400": "BAW-4CGBA 10(100)A   (RS485)",
+"P135000100": "CED-4CFEA 220 380V 5(80)A 50  CL.1",
+"P135000101": "CED-4CFBA 230 400V 10(100)A 50 ",
+"P135000201": "CED-4CFAA 230 400V 5(6)A 50 ",
+"P135000500": "CED-4C ML Multi-parameters 1p2w, 1p3w,3p3w,3p4w",
+"P136000100": "CMFM-F 50-600V  1A 5A 45-66Hz  CL0.5",
+"P136000200": "CMFM-G 50-600V  1A 5A 45-66Hz  CL0.5 TOU",
+"RJ12-100": "10.0 meter",
+"Z3-C160120TH": "120A 1A-1VA 1.0",
+"Z3-C240050TH": "50A 5A-0.5VA 5.0",
+"Z3-C240100TH": "100A 5A-1VA 1.0 (UD-0552-4)",
+"Z3-C240150TH": "150A 5A-1VA 1.0 (UD-0552-4)",
+"Z3-C240200TH": "200A 5A-1VA 1.0 (UD-0552-4)",
+"Z3-C240300TH": "300A 5A-2.5VA 1.0 (UD-0552-4)",
+"Z3-C360400TH": "400A 5A -2.5VA 1.0(UD-0552-4)",
+"Z3-C360500TH": "500A 5A-7.5VA 1.0 (UD-0552-4)",
+"Z3-C360600TH": "600A 5A-12.5VA 1.0 (UD-0552-4)",
+"Z3-C500700TH": "700A 5A-5VA 1.0 (UD-0552-4)",
+"Z3-C500800TH": "800A 5A-12.5VA 1.0 (UD-0552-4)",
+"A111600400": "Top cover Assembly BAW-1~2",
+"A111600500": "Terminal cover Assembly BAW-1 1P2W",
+"A111700300": "Register BAW-1~4 A11",
+"A111900300": "Chassis Assembly BAW-1HBA 10(80)A ",
+"A115000100": "電源變壓器BAW-RA KG- 9V1.3A",
+"A115000200": "IC CARD (Print)",
+"A115000300": "Optical head",
+"A115000400": "Signal cable",
+"A121900300": "Chassis Assembly BAW-2  10(80)A",
+"A122600400": "Top cover Assembly BAW-3~4",
+"A122600500": "Terminal cover Assembly BAW-3 3P3W-direct-type",
+"A122900400": "Chassis Assembly BAW-3  10(100)A",
+"A1240001-00": "電表電池 FDK-CR2 3-8LHT-CN240S",
+"A1240002-00": "AMI電表電池 TOSHIBA ER4V 3.6V-1200mAh",
+"A124902300": "插座組立圓表",
+"A131600700": "Terminal cover Assembly BAW-4 3P4W-direct-type",
+"A131600800": "Terminal cover Assembly BAW-4 3P4W-CT",
+"A131900100": "Chassis Assembly BAW-4 5(20)A",
+"A131900400": "Chassis Assembly BAW-4  10(100)A",
+"C111700111": "Ø3x6mm 自攻螺絲十字圓頭",
+"C111700211": "Ø3x8mm 自攻螺絲十字圓頭",
+"C111700448-00": "BAW瓦時計外箱(30入)",
+"C111700548-00": "BAW瓦時計外箱(12入) ",
+"C111700948-00": "BAW預付費電表外箱(12入 18入)",
+"P115000100": "BAW-1ABBA 10(50)A ",
+"P121000300": "BAW-2CBA 10(50)A ",
+"P122000500": "BAW-3HBA 10(50)A  V",
+"P123000100": "BAW-2DCBA 10(80)A ",
+"P125000100": "BAW-2CCBA 10(50)A  (RS485)",
+"P125000200": "BAW-2CCCA 20(80)A  (RS485)",
+"P126000100": "BAW-3CHAA 5(20)A (RS485)",
+"P126000200": "BAW-3CBBA 10(50)A (兼容110V)(RS485)",
+"P126000400": "BAW-3CHBA 10(100)A (RS485)",
+"P133000200": "BAW-4CGBA 10(50)A  (RS485)",
+"P133000300": "BAW-4CGCA 20(100)A  (RS485)",
+"P135000200": "DIN Rail Electronic Energy Meter CED-4CFAA 220 380V 1.5(6)A 50  CL.1 附變比器用",
+"P111000600": "BAW-1HBA 10(80)A",
+"P121000500": "BAW-2CBA 10(80)A",
+"P122000700": "BAW-3HBA 10(100)A",
+"P131001000": "BAW-4GBA 10(100)A",
+
 };
 
 // ===== QR Code =====
@@ -103,7 +196,7 @@ function tick(){
     canvas.width=video.videoWidth; canvas.height=video.videoHeight;
     context.drawImage(video,0,0,canvas.width,canvas.height);
     const imageData=context.getImageData(0,0,canvas.width,canvas.height);
-    const code=jsQR(imageData.data,imageData.width,imageData.height);
+    const code=jsQR(imageData.data,imageData.width,canvas.height);
     if(code){ document.getElementById("item").value=code.data; document.getElementById("model").value=itemModelMap[code.data]||"（未設定型號）"; }
   }
   requestAnimationFrame(tick);
@@ -133,8 +226,8 @@ noteBtns.forEach(btn=>{
   });
 });
 
-// ===== 下一筆 =====
-document.getElementById("nextBtn").addEventListener("click", addRecord);
+// ===== 儲存按鈕 =====
+document.getElementById("saveBtn").addEventListener("click", addRecord);
 function addRecord(){
   const item=document.getElementById("item").value;
   const model=document.getElementById("model").value;
@@ -157,7 +250,7 @@ function addRecord(){
   const delBtn=document.createElement("span"); delBtn.innerText="刪除"; delBtn.className="deleteBtn";
   delBtn.onclick=()=>row.remove(); delCell.appendChild(delBtn);
 
-  // 清空
+  // 清空欄位
   document.getElementById("item").value="";
   document.getElementById("model").value="";
   document.getElementById("qty").value=1;
