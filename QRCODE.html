@@ -2,14 +2,17 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>庫存掃描系統 - 原生相機</title>
+<title>庫存掃描系統 - 可刪除紀錄</title>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
-  body { font-family: Arial; margin: 20px; }
-  label { display: block; margin-top: 10px; }
-  input, select, textarea { width: 200px; margin-top: 5px; padding: 5px; }
-  button { margin-top: 10px; padding: 5px 10px; }
-  #video { width: 300px; border: 1px solid #ccc; }
+body { font-family: Arial; margin: 20px; }
+label { display: block; margin-top: 10px; }
+input, select, textarea, button { width: 200px; margin-top: 5px; padding: 5px; }
+button { width: auto; }
+#video { width: 300px; border: 1px solid #ccc; margin-top: 10px; }
+table { border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
 </style>
 </head>
 <body>
@@ -38,9 +41,11 @@
 <textarea id="note" rows="2"></textarea>
 
 <button id="saveBtn">儲存紀錄</button>
+<button id="nextBtn" disabled>下一個</button>
+<button id="exportBtn">匯出 Excel</button>
 
 <h3>紀錄列表</h3>
-<table border="1" cellpadding="5" id="recordTable">
+<table id="recordTable">
   <tr>
     <th>時間</th>
     <th>料號</th>
@@ -48,13 +53,14 @@
     <th>儲位</th>
     <th>數量</th>
     <th>備註</th>
+    <th>操作</th>
   </tr>
 </table>
 
 <script>
 // ===== 料號 → 型號對照表 =====
 const itemModelMap = {
-"CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
+  "CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
 "CT24J1200T01": "5VA-1200 5A",
 "ESCT-TU10-20A": "Split core CT-Type:ESCT-TA10",
 "ESCT-TU16-150A": "Split core CT-Type:ESCT-TA16",
@@ -148,10 +154,11 @@ const itemModelMap = {
 
 };
 
-// ===== 相機掃描 =====
+// ===== 相機掃描控制 =====
 const video = document.getElementById("video");
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
+let scanning = true;
 
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
   .then(stream => {
@@ -162,16 +169,17 @@ navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
   .catch(err => alert("相機無法啟動：" + err));
 
 function tick() {
-  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+  if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     const code = jsQR(imageData.data, imageData.width, imageData.height);
     if (code) {
-      // 掃描成功
+      scanning = false;
       document.getElementById("item").value = code.data;
       document.getElementById("model").value = itemModelMap[code.data] || "（未設定型號）";
+      document.getElementById("nextBtn").disabled = false;
     }
   }
   requestAnimationFrame(tick);
@@ -200,15 +208,34 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   row.insertCell(4).innerText = qty;
   row.insertCell(5).innerText = note;
 
-  // 清空欄位
+  // ===== 新增刪除按鈕 =====
+  const delCell = row.insertCell(6);
+  const delBtn = document.createElement("button");
+  delBtn.innerText = "刪除";
+  delBtn.onclick = () => table.deleteRow(row.rowIndex);
+  delCell.appendChild(delBtn);
+
+  document.getElementById("saveBtn").disabled = true;
+});
+
+// ===== 下一個 =====
+document.getElementById("nextBtn").addEventListener("click", () => {
   document.getElementById("item").value = "";
   document.getElementById("model").value = "";
   document.getElementById("qty").value = 1;
   document.getElementById("note").value = "";
+  document.getElementById("saveBtn").disabled = false;
+  document.getElementById("nextBtn").disabled = true;
+  scanning = true;
+});
+
+// ===== 匯出 Excel =====
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const table = document.getElementById("recordTable");
+  const wb = XLSX.utils.table_to_book(table, { sheet: "庫存紀錄" });
+  XLSX.writeFile(wb, "庫存紀錄.xlsx");
 });
 </script>
 
 </body>
 </html>
-
-
