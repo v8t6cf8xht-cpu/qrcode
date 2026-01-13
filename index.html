@@ -69,8 +69,14 @@ th { background:#f0f0f0; }
 </div>
 
 <label>數量</label>
-<input type="number" id="qty" value="1" min="1">
-
+document.getElementById("item").value="";
+document.getElementById("model").value="";
+document.getElementById("qty").value=""; // 保持空白
+selectedNote=""; selectedLocation="";
+locationBtns.forEach(b=>b.classList.remove("selected"));
+noteBtns.forEach(b=>b.classList.remove("selected"));
+noteInput.value=""; noteInput.style.display="none";
+  
 <label>備註</label>
 <div class="button-row" id="noteBtns">
   <button class="optionBtn red" data-value="不良">不良</button>
@@ -307,3 +313,4 @@ startCamera();
 </script>
 </body>
 </html>
+
