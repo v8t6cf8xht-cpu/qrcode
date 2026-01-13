@@ -30,7 +30,33 @@ th,td{border:1px solid #ccc;padding:6px;text-align:center;}
 
 <h2>📦 庫存掃描系統</h2>
 
-<button id="startCamBtn">📷 啟動相機</button>
+document.getElementById("startCamBtn").onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false
+    });
+
+    video.srcObject = stream;
+
+    // ⭐ 關鍵（iPhone 必要）
+    video.setAttribute("playsinline", true);
+    video.muted = true;
+
+    await video.play();   // ⭐ 一定要呼叫
+
+    video.style.display = "block";
+    scanning = true;
+    status.textContent = "相機已啟動，請掃 QRCode";
+
+    requestAnimationFrame(scanLoop);
+
+  } catch (err) {
+    status.textContent = "❌ 相機啟動失敗";
+    alert("相機錯誤：" + err.message);
+  }
+};
+
 <p id="camStatus">相機尚未啟動</p>
 <video id="video" playsinline></video>
 
@@ -196,3 +222,4 @@ exportBtn.onclick=()=>{
 </script>
 </body>
 </html>
+
