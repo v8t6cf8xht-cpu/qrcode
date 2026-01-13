@@ -9,15 +9,21 @@
 body { margin:0; font-family: Arial, sans-serif; background:#f5f5f5; }
 .container { padding:10px; max-width:600px; margin:auto; background:#fff; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
 h2 { text-align:center; color:#333; margin-bottom:10px; }
-#video { width:100%; border-radius:8px; margin-bottom:10px; }
-label { font-weight:bold; margin-top:10px; display:block; color:#555; }
-#item, #model, #qty, #noteInput { width:100%; padding:8px; margin-top:5px; border-radius:4px; border:1px solid #ccc; }
+
+/* 兩欄排版 */
+.flex-row { display:flex; flex-wrap:wrap; gap:10px; }
+.flex-left { flex:1; display:flex; justify-content:center; align-items:center; }
+.flex-right { flex:1; display:flex; flex-direction:column; gap:5px; }
+
+#video { width:100%; max-width:200px; height:200px; border-radius:8px; border:2px solid #ccc; }
+
+label { font-weight:bold; color:#555; }
+input[type=text], input[type=number] { width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; }
+
 .button-row { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
-button.optionBtn { flex:1; padding:12px; border:none; border-radius:5px; font-size:16px; color:#fff; transition:0.2s; }
+button.optionBtn, #rescanBtn, #stopScanBtn, #saveBtn, #exportBtn { flex:1; padding:12px; border-radius:5px; font-size:16px; color:#fff; transition:0.2s; border:none; }
+
 button.optionBtn.selected { border:2px solid #000; }
-button#saveBtn { width:100%; background:#FFEB3B; color:#000; margin-top:10px; font-size:18px; }
-button#exportBtn { width:100%; background:#FF9800; color:#fff; margin-top:5px; font-size:18px; }
-button#rescanBtn, button#stopScanBtn { flex:1; padding:12px; border-radius:5px; font-size:16px; transition:0.2s; }
 
 /* 顏色設定 */
 #noteBtns .red { background:#f44336; }
@@ -27,7 +33,9 @@ button#rescanBtn, button#stopScanBtn { flex:1; padding:12px; border-radius:5px; 
 
 #locationBtns .optionBtn { background:#2196F3; }
 #rescanBtn { background:#fff; color:#2196F3; border:2px solid #000; }
-#stopScanBtn { background:#f44336; color:#fff; border:none; }
+#stopScanBtn { background:#f44336; color:#fff; }
+#saveBtn { background:#FFEB3B; color:#000; }
+#exportBtn { background:#FF9800; color:#fff; }
 
 table { width:100%; border-collapse:collapse; margin-top:15px; }
 th, td { border:1px solid #ccc; padding:5px; text-align:center; font-size:14px; }
@@ -39,40 +47,48 @@ th { background:#f0f0f0; }
 <div class="container">
 <h2>庫存掃描系統（手機版）</h2>
 
-<video id="video" autoplay playsinline></video>
+<!-- 兩欄排版 -->
+<div class="flex-row">
+  <div class="flex-left">
+    <video id="video" autoplay playsinline></video>
+  </div>
+  <div class="flex-right">
+    <label>料號</label>
+    <input type="text" id="item" readonly>
 
-<label>料號</label>
-<input type="text" id="item" readonly>
+    <label>型號</label>
+    <input type="text" id="model" readonly>
 
-<label>型號</label>
-<input type="text" id="model" readonly>
+    <label>儲位</label>
+    <div class="button-row" id="locationBtns">
+      <button class="optionBtn" data-value="C10-1">C10-1</button>
+      <button class="optionBtn" data-value="C10-2">C10-2</button>
+      <button class="optionBtn" data-value="C10-5">C10-5</button>
+    </div>
 
-<label>儲位</label>
-<div class="button-row" id="locationBtns">
-  <button class="optionBtn" data-value="C10-1">C10-1</button>
-  <button class="optionBtn" data-value="C10-2">C10-2</button>
-  <button class="optionBtn" data-value="C10-5">C10-5</button>
+    <label>數量</label>
+    <input type="number" id="qty" value="1" min="1">
+
+    <label>備註</label>
+    <div class="button-row" id="noteBtns">
+      <button class="optionBtn red" data-value="不良">不良</button>
+      <button class="optionBtn orange" data-value="待修">待修</button>
+      <button class="optionBtn green" data-value="待歸位">待歸位</button>
+      <button class="optionBtn gray" data-value="其他">其他</button>
+    </div>
+    <input type="text" id="noteInput" placeholder="請輸入備註" style="display:none; margin-top:5px;">
+
+    <div class="button-row" style="margin-top:10px;">
+      <button id="rescanBtn">重新掃描</button>
+      <button id="stopScanBtn">停止掃描</button>
+    </div>
+
+    <div class="button-row" style="margin-top:10px;">
+      <button id="saveBtn">儲存</button>
+      <button id="exportBtn">匯出 Excel</button>
+    </div>
+  </div>
 </div>
-
-<label>數量</label>
-<input type="number" id="qty" value="1" min="1">
-
-<label>備註</label>
-<div class="button-row" id="noteBtns">
-  <button class="optionBtn red" data-value="不良">不良</button>
-  <button class="optionBtn orange" data-value="待修">待修</button>
-  <button class="optionBtn green" data-value="待歸位">待歸位</button>
-  <button class="optionBtn gray" data-value="其他">其他</button>
-</div>
-<input type="text" id="noteInput" placeholder="請輸入備註" style="display:none; margin-top:5px;">
-
-<div class="button-row" style="margin-top:10px;">
-  <button id="rescanBtn">重新掃描</button>
-  <button id="stopScanBtn">停止掃描</button>
-</div>
-
-<button id="saveBtn">儲存</button>
-<button id="exportBtn">匯出 Excel</button>
 
 <h3>紀錄列表</h3>
 <table id="recordTable">
@@ -291,4 +307,3 @@ startCamera();
 </script>
 </body>
 </html>
-
