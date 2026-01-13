@@ -2,74 +2,86 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>庫存掃描系統 - 彩色備註 & 大數字鍵盤</title>
+<title>庫存掃描系統</title>
+
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <style>
 body { font-family: Arial; margin: 20px; }
-label { display: block; margin-top: 10px; }
-input, select, textarea, button { width: 200px; margin-top: 5px; padding: 5px; }
-button { width: auto; margin-right:5px; margin-top:5px; cursor:pointer; }
-#video { width: 300px; border: 1px solid #ccc; margin-top: 10px; }
-table { border-collapse: collapse; margin-top: 10px; }
-th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
-.note-btn { color:#fff; border:none; padding:5px 10px; margin:2px; }
-.red { background-color:#e74c3c; }
-.orange { background-color:#e67e22; }
-.blue { background-color:#3498db; }
-.gray { background-color:#95a5a6; color:#000; }
+label { display: block; margin-top: 12px; font-weight: bold; }
+input, textarea { width: 220px; margin-top: 5px; padding: 6px; }
+button { padding: 6px 12px; margin: 4px 4px 0 0; cursor: pointer; }
+#video { width: 320px; border: 1px solid #ccc; margin-top: 10px; }
+
+table { border-collapse: collapse; margin-top: 15px; }
+th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+
+/* 儲位按鈕 */
+.loc-btn {
+  border: 1px solid #999;
+  background: #f5f5f5;
+}
+.loc-btn.active {
+  background: #2ecc71;
+  color: #fff;
+  border-color: #27ae60;
+}
+
+/* 備註按鈕 */
+.note-btn { color:#fff; border:none; }
+.red { background:#e74c3c; }
+.orange { background:#e67e22; }
+.blue { background:#3498db; }
+.gray { background:#95a5a6; color:#000; }
 </style>
 </head>
 <body>
 
-<h2>庫存掃描系統</h2>
+<h2>📦 庫存掃描系統</h2>
 
 <video id="video" autoplay></video>
 
 <label>料號</label>
-<input type="text" id="item" readonly>
+<input id="item" readonly>
 
 <label>型號</label>
-<input type="text" id="model" readonly>
+<input id="model" readonly>
 
-<label>儲位</label>
-<select id="location">
-  <option value="C10-1">C10-1</option>
-  <option value="C10-2">C10-2</option>
-  <option value="C10-5">C10-5</option>
-</select>
+<label>儲位（點選）</label>
+<div id="locationButtons">
+  <button class="loc-btn" data-loc="C10-1">C10-1</button>
+  <button class="loc-btn" data-loc="C10-2">C10-2</button>
+  <button class="loc-btn" data-loc="C11-5">C11-5</button>
+</div>
 
 <label>數量</label>
-<input type="number" id="qty" value="1" min="1" inputmode="numeric" pattern="[0-9]*">
+<input id="qty" type="number" value="1" min="1" inputmode="numeric" pattern="[0-9]*">
 
 <label>備註</label>
-<div id="noteButtons">
+<div>
   <button class="note-btn red" data-note="不良品">不良品</button>
   <button class="note-btn orange" data-note="待修品">待修品</button>
   <button class="note-btn blue" data-note="待歸位">待歸位</button>
   <button class="note-btn gray" data-note="其他">其他</button>
 </div>
-<textarea id="note" rows="2" placeholder="如果選擇其他，可輸入文字"></textarea>
+<textarea id="note" rows="2" placeholder="選其他時輸入"></textarea>
 
-<button id="saveBtn">儲存紀錄</button>
+<br>
+<button id="saveBtn">儲存</button>
 <button id="nextBtn" disabled>下一個</button>
 <button id="exportBtn">匯出 Excel</button>
 
 <h3>紀錄列表</h3>
 <table id="recordTable">
-  <tr>
-    <th>時間</th>
-    <th>料號</th>
-    <th>型號</th>
-    <th>儲位</th>
-    <th>數量</th>
-    <th>備註</th>
-    <th>操作</th>
-  </tr>
+<tr>
+  <th>時間</th><th>料號</th><th>型號</th>
+  <th>儲位</th><th>數量</th><th>備註</th><th>操作</th>
+</tr>
 </table>
 
 <script>
-// ===== 料號 → 型號對照表 =====
+/* ===== 料號 → 型號 ===== */
 const itemModelMap = {
   "CRJ-31-100MA": "Primary current: 20~600A-Second output: 100mA",
 "CT24J1200T01": "5VA-1200 5A",
@@ -165,97 +177,93 @@ const itemModelMap = {
 
 };
 
-// ===== 相機掃描控制 =====
-const video = document.getElementById("video");
-const canvas = document.createElement("canvas");
-const context = canvas.getContext("2d");
-let scanning = true;
-
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-  .then(stream => {
-    video.srcObject = stream;
-    video.setAttribute("playsinline", true);
-    requestAnimationFrame(tick);
-  })
-  .catch(err => alert("相機無法啟動：" + err));
-
-function tick() {
-  if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height);
-    if (code) {
-      scanning = false;
-      document.getElementById("item").value = code.data;
-      document.getElementById("model").value = itemModelMap[code.data] || "（未設定型號）";
-      document.getElementById("nextBtn").disabled = false;
-      document.getElementById("qty").focus(); // 自動聚焦到數量
-    }
+/* ===== 儲位選擇 ===== */
+let selectedLocation = "";
+document.querySelectorAll(".loc-btn").forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll(".loc-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedLocation = btn.dataset.loc;
   }
-  requestAnimationFrame(tick);
-}
+});
 
-// ===== 備註按鈕功能 =====
-const noteButtons = document.querySelectorAll(".note-btn");
-noteButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
+/* ===== 備註按鈕 ===== */
+document.querySelectorAll(".note-btn").forEach(btn=>{
+  btn.onclick = ()=>{
     if(btn.dataset.note === "其他") {
       document.getElementById("note").focus();
     } else {
       document.getElementById("note").value = btn.dataset.note;
     }
-  });
+  }
 });
 
-// ===== 儲存紀錄 =====
-document.getElementById("saveBtn").addEventListener("click", () => {
-  const item = document.getElementById("item").value;
-  const model = document.getElementById("model").value;
-  const location = document.getElementById("location").value;
-  const qty = document.getElementById("qty").value;
-  const note = document.getElementById("note").value;
-  const time = new Date().toLocaleString();
+/* ===== 相機掃描 ===== */
+const video = document.getElementById("video");
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
+let scanning = true;
 
-  if (!item) { alert("請先掃描料號！"); return; }
-
-  const table = document.getElementById("recordTable");
-  const row = table.insertRow();
-  row.insertCell(0).innerText = time;
-  row.insertCell(1).innerText = item;
-  row.insertCell(2).innerText = model;
-  row.insertCell(3).innerText = location;
-  row.insertCell(4).innerText = qty;
-  row.insertCell(5).innerText = note;
-
-  const delCell = row.insertCell(6);
-  const delBtn = document.createElement("button");
-  delBtn.innerText = "刪除";
-  delBtn.onclick = () => table.deleteRow(row.rowIndex);
-  delCell.appendChild(delBtn);
-
-  document.getElementById("saveBtn").disabled = true;
+navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" }})
+.then(stream=>{
+  video.srcObject = stream;
+  video.setAttribute("playsinline", true);
+  requestAnimationFrame(scanLoop);
 });
 
-// ===== 下一個 =====
-document.getElementById("nextBtn").addEventListener("click", () => {
-  document.getElementById("item").value = "";
-  document.getElementById("model").value = "";
-  document.getElementById("qty").value = 1;
-  document.getElementById("note").value = "";
-  document.getElementById("saveBtn").disabled = false;
-  document.getElementById("nextBtn").disabled = true;
+function scanLoop(){
+  if(video.readyState === video.HAVE_ENOUGH_DATA && scanning){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video,0,0);
+    const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const code = jsQR(img.data, img.width, img.height);
+    if(code){
+      scanning = false;
+      item.value = code.data;
+      model.value = itemModelMap[code.data] || "（未設定型號）";
+      nextBtn.disabled = false;
+      qty.focus();
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+/* ===== 儲存 ===== */
+saveBtn.onclick = ()=>{
+  if(!item.value || !selectedLocation){
+    alert("請確認已掃描料號並選擇儲位");
+    return;
+  }
+  const row = recordTable.insertRow();
+  row.innerHTML = `
+    <td>${new Date().toLocaleString()}</td>
+    <td>${item.value}</td>
+    <td>${model.value}</td>
+    <td>${selectedLocation}</td>
+    <td>${qty.value}</td>
+    <td>${note.value}</td>
+    <td><button onclick="this.parentNode.parentNode.remove()">刪除</button></td>
+  `;
+  saveBtn.disabled = true;
+};
+
+/* ===== 下一個 ===== */
+nextBtn.onclick = ()=>{
+  item.value = model.value = note.value = "";
+  qty.value = 1;
+  selectedLocation = "";
+  document.querySelectorAll(".loc-btn").forEach(b=>b.classList.remove("active"));
+  saveBtn.disabled = false;
+  nextBtn.disabled = true;
   scanning = true;
-  document.getElementById("qty").focus(); // 聚焦數量
-});
+};
 
-// ===== 匯出 Excel =====
-document.getElementById("exportBtn").addEventListener("click", () => {
-  const table = document.getElementById("recordTable");
-  const wb = XLSX.utils.table_to_book(table, { sheet: "庫存紀錄" });
-  XLSX.writeFile(wb, "庫存紀錄.xlsx");
-});
+/* ===== 匯出 Excel ===== */
+exportBtn.onclick = ()=>{
+  const wb = XLSX.utils.table_to_book(recordTable, {sheet:"庫存紀錄"});
+  XLSX.writeFile(wb,"庫存紀錄.xlsx");
+};
 </script>
 
 </body>
